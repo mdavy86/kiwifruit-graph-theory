@@ -14,7 +14,7 @@ library(magrittr)
 library(here)
 library(lubridate)
 library(lattice)
-
+library(lme4)
 
 # relational information for each of the quadrants
 quadrant_info <- 
@@ -45,36 +45,150 @@ source("../data_import/architecture_data_import_and_merge.R")
 source("../data_import/shoot_leaf_area_import_and_plot.R")
 source("../data_import/shoot_data_import_and_merge.R")
 source("../data_import/fruit_data_import_and_merge.R")
+
+## Add factors
+all_fruit_data <- within(all_fruit_data, VineUUID <- factor(VineUUID, levels=unique(VineUUID), labels= paste("Vine", unique(VineUUID))))
 ```
 
-## Visualize
+## Background
+
+Kris Kramer-Walter and Patrick Snelgar have conducted a study of 9 G3 vines from flowering 
+fruit harvest, the entire population of fruit were stripped off each vine in 2020, 
+fruit were then destructively assessed in the fast lab. Three different canopy
+structure treatments (Conventional Spur, Strung) were replicated over three vines.
+
+This dataset provides the entire population of fruit weights in 2020, and the underlying
+sampling distribution for G3, a control for the Gold programme. From this dataset we can
+examine the underlying within vine variability of fruit weights;
+
+tabulating Numbers of fruit per vine assessed by Vine and Treatment;
 
 ```{r}
-histogram(~ FreshWeight | factor(VineUUID), data=all_fruit_data, scales=list(alternating=FALSE), 
+knitr::kable(with(all_fruit_data, table(VineUUID, VineTreatmentNoNumber)))
+```
+
+## Exploratory analysis
+
+Visualizing the Fresh weight using histograms, conditioned on each Vine, Treatment, and collapsed over Vines;
+
+```{r}
+histogram(~ FreshWeight | VineUUID, data=all_fruit_data, scales=list(alternating=FALSE), 
           between=list(x=0.3, y=0.3), breaks=30, layout=c(3,3))
 
+histogram(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
+          aspect=1, main="Collapsing over replicate Vines", 
+          scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,1))
 
-qqmath(~ FreshWeight | factor(VineUUID), data=all_fruit_data,
-       distribution = function(p) qnorm(p, mean=0, sd=1),
+histogram(~ FreshWeight, data=all_fruit_data, scales=list(alternating=FALSE), 
+          between=list(x=0.3, y=0.3), breaks=30, main="Collapsing over all Vines")
+```
+
+Testing if we can collapse over vines;
+
+```{r}
+summary(aov(FreshWeight ~ VineUUID, data=all_fruit_data))
+
+library(insight)
+m <- lmer(FreshWeight ~ 1 | VineUUID, data=all_fruit_data)
+summary(m)
+get_variance(m)
+```
+
+
+## Summary statistics
+
+Summary statistics for each vine;
+
+```{r}
+sum_vine <- cbind(Vine=levels(all_fruit_data$VineUUID), unname(do.call(rbind.data.frame, with(all_fruit_data, tapply(FreshWeight,  VineUUID, summary)))))
+colnames(sum_vine) <- c("Vine", "Min", "1st Qu", "Median","Mean", "3rd Qu", "Max", "NA's")
+knitr::kable(sum_vine)
+```
+
+Standard deviations within Vines;
+
+```{r}
+sd_vine <- with(all_fruit_data, tapply(FreshWeight,  VineUUID, sd, na.rm=TRUE))
+knitr::kable(sd_vine,  col.names=c("sd(X)"))
+```
+
+The range of standard deviations across the 9 Vines is;
+
+```{r}
+range(sd_vine)
+```
+
+and the average [RMS](https://en.wikipedia.org/wiki/Root_mean_square) standard deviation is;
+
+```{r}
+sqrt(mean(sd_vine^2))
+```
+
+## Sampling Distribution
+
+As we have the entire population of fruit picked and assessed for these 9 Vines,
+we have the underlying sampling distribution. This distribution visually appears 
+similar to an underlying normal distrubution, testing for normality using normal
+Q-Q plots conditioned by Vine;
+
+```{r}
+qqmath(~ FreshWeight | VineUUID, data=all_fruit_data,
+       distribution = function(p) qnorm(p, mean=0, sd=1), main="Normal Q-Q Plot",
+       ylab="Sample Quantiles", xlab="Theoretical quantiles",
        scales=list(alternating=FALSE), between=list(x=0.3, y=0.3),
-       breaks=30, layout=c(3,3),
-       prepanel = prepanel.qqmathline,
+       breaks=30, layout=c(3,3), pch=16, cex=0.5, aspect=1,
+      prepanel = prepanel.qqmathline,
        panel = function(x, ...) {
          panel.qqmath(x, ...)
          panel.qqmathline(x, ...)
        })
+```
 
+Testing for normality using normal Q-Q plots by Treatment collapsing over replicates;
 
-with(all_fruit_data, tapply(FreshWeight,  VineUUID, summary))
-with(all_fruit_data, tapply(FreshWeight,  VineUUID, sd, na.rm=TRUE))
+```{r}
+qqmath(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
+       distribution = function(p) qnorm(p, mean=0, sd=1), main="Normal Q-Q Plot",
+       ylab="Sample Quantiles", xlab="Theoretical quantiles",
+       scales=list(alternating=FALSE), between=list(x=0.3, y=0.3),
+       breaks=30, layout=c(3,1), pch=16, cex=0.5, aspect=1,
+      prepanel = prepanel.qqmathline,
+       panel = function(x, ...) {
+         panel.qqmath(x, ...)
+         panel.qqmathline(x, ...)
+       })
+```
 
-with(all_fruit_data, tapply(FreshWeight,  VineUUID, length))
+Testing for normality using normal Q-Q plots collapsing over all Vines;
+
+```{r}
+qqmath(~ FreshWeight, data=all_fruit_data,
+       distribution = function(p) qnorm(p, mean=0, sd=1), main="Normal Q-Q Plot",
+       ylab="Sample Quantiles", xlab="Theoretical quantiles",
+       scales=list(alternating=FALSE), between=list(x=0.3, y=0.3),
+       breaks=30, pch=16, cex=0.5, aspect=1,
+      prepanel = prepanel.qqmathline,
+       panel = function(x, ...) {
+         panel.qqmath(x, ...)
+         panel.qqmathline(x, ...)
+       })
 ```
 
 
 
-```{r scratchpad, echo=FALSE, results="hide"}
+
+```{r scratchpad, echo=FALSE, eval=FALSE}
 xyplot( DryMatter ~ FreshWeight | factor(VineUUID), data=all_fruit_data, scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,3), pch=16, cex=0.3)
 
 xyplot( DryMatter ~ FreshWeightSlice | factor(VineUUID), data=all_fruit_data, scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,3), pch=16, cex=0.3)
+
+
+knitr::kable(with(all_fruit_data, tapply(FreshWeight,  VineUUID, length)), col.names=c("N"))
+
+
+with(all_fruit_data, tapply(FreshWeight,  VineUUID, shapiro.test))
+
+## Test for normality
+replicate(10000, shapiro.test(rt(3, 4))$p) %>%  hist
+replicate(1000, shapiro.test(sample(all_fruit_data$FreshWeight, 100, replace=TRUE))$p) %>%  hist
 ```
