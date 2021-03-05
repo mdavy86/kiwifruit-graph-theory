@@ -15,6 +15,8 @@ library(here)
 library(lubridate)
 library(lattice)
 library(lme4)
+library(insight)
+
 
 # relational information for each of the quadrants
 quadrant_info <- 
@@ -50,6 +52,7 @@ source("../data_import/fruit_data_import_and_merge.R")
 all_fruit_data <- within(all_fruit_data, VineUUID <- factor(VineUUID, levels=unique(VineUUID), labels= paste("Vine", unique(VineUUID))))
 ```
 
+
 ## Background
 
 Kris Kramer-Walter and Patrick Snelgar have conducted a study of 9 G3 vines from flowering 
@@ -61,7 +64,7 @@ This dataset provides the entire population of fruit weights in 2020, and the un
 sampling distribution for G3, a control for the Gold programme. From this dataset we can
 examine the underlying within vine variability of fruit weights;
 
-tabulating Numbers of fruit per vine assessed by Vine and Treatment;
+Tabulating Numbers of fruit per vine assessed by Vine and Treatment;
 
 ```{r}
 knitr::kable(with(all_fruit_data, table(VineUUID, VineTreatmentNoNumber)))
@@ -81,17 +84,6 @@ histogram(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
 
 histogram(~ FreshWeight, data=all_fruit_data, scales=list(alternating=FALSE), 
           between=list(x=0.3, y=0.3), breaks=30, main="Collapsing over all Vines")
-```
-
-Testing if we can collapse over vines;
-
-```{r}
-summary(aov(FreshWeight ~ VineUUID, data=all_fruit_data))
-
-library(insight)
-m <- lmer(FreshWeight ~ 1 | VineUUID, data=all_fruit_data)
-summary(m)
-get_variance(m)
 ```
 
 
@@ -123,6 +115,45 @@ and the average [RMS](https://en.wikipedia.org/wiki/Root_mean_square) standard d
 ```{r}
 sqrt(mean(sd_vine^2))
 ```
+
+These summary statistics appear to be consistent with 
+[Kiwifruit fruit size distributions, K. J. McAneney, A. C. Richardson, A. E. Green](https://www.tandfonline.com/doi/pdf/10.1080/01140671.1989.10428047)
+
+
+## Estimating variance components
+
+Using lmer to obtain a reml model;
+
+```{r}
+m2 <- lmer(FreshWeight ~ VineTreatmentNoNumber + (VineTreatmentNoNumber | VineUUID), data=all_fruit_data)
+summary(m2)
+```
+
+
+### Fixed effects
+
+Investigating methods, conventional is slightly better than Spur which is slightly better than Strung.
+
+```{r}
+ get_parameters(m2)
+```
+
+
+### Random effects
+
+Variance components between Vines (3 per Treatment level) within Treatments;
+
+```{r}
+c(get_variance_intercept(m2), get_variance_slope(m2))
+```
+
+
+Residual standard deviation within Vines is;
+
+```{r}
+sqrt(unname(get_variance_residual(m2)))
+```
+
 
 ## Sampling Distribution
 
@@ -159,6 +190,7 @@ qqmath(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
        })
 ```
 
+
 Testing for normality using normal Q-Q plots collapsing over all Vines;
 
 ```{r}
@@ -175,10 +207,26 @@ qqmath(~ FreshWeight, data=all_fruit_data,
 ```
 
 
+## Bootstrapping
+
+```{r}
+#tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 1" & !is.na(all_fruit_data$FreshWeight), ]
+
+#sample(tmp$FreshWeight, 40)
+
+hist(replicate(10000,  var(sample(tmp$FreshWeight, 40))), breaks=30)
+
+qqplot(replicate(10000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
+```
 
 
 ```{r scratchpad, echo=FALSE, eval=FALSE}
 xyplot( DryMatter ~ FreshWeight | factor(VineUUID), data=all_fruit_data, scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,3), pch=16, cex=0.3)
+
+
+summary(lm(Reaction ~ Days, sleepstudy))
+summary(lmer(Reaction ~ Days + (Days | Subject), sleepstudy))
+
 
 xyplot( DryMatter ~ FreshWeightSlice | factor(VineUUID), data=all_fruit_data, scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,3), pch=16, cex=0.3)
 
@@ -187,6 +235,19 @@ knitr::kable(with(all_fruit_data, tapply(FreshWeight,  VineUUID, length)), col.n
 
 
 with(all_fruit_data, tapply(FreshWeight,  VineUUID, shapiro.test))
+
+## Anova
+m1 <- aov(FreshWeight ~ VineUUID, data=all_fruit_data)
+summary(m1)
+sqrt(summary(m1)[[1]][[3]][2])
+
+
+## sleepstudy
+xyplot(Reaction ~ 1 + Days | Subject , data=sleepstudy, layout=c(9,2),
+       panel=function(x,y, subscripts, groups){
+         panel.points(x,y)
+         panel.lmline(x,y)
+       })
 
 ## Test for normality
 replicate(10000, shapiro.test(rt(3, 4))$p) %>%  hist

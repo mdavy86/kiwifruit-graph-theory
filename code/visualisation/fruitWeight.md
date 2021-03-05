@@ -14,7 +14,7 @@ and the underlying sampling distribution for G3, a control for the Gold
 programme. From this dataset we can examine the underlying within vine
 variability of fruit weights;
 
-tabulating Numbers of fruit per vine assessed by Vine and Treatment;
+Tabulating Numbers of fruit per vine assessed by Vine and Treatment;
 
 ``` r
 knitr::kable(with(all_fruit_data, table(VineUUID, VineTreatmentNoNumber)))
@@ -58,73 +58,6 @@ histogram(~ FreshWeight, data=all_fruit_data, scales=list(alternating=FALSE),
 ```
 
 ![](fruitWeight_files/figure-gfm/unnamed-chunk-2-3.png)<!-- -->
-
-Testing if we can collapse over vines;
-
-``` r
-summary(aov(FreshWeight ~ VineUUID, data=all_fruit_data))
-```
-
-    ##               Df  Sum Sq Mean Sq F value Pr(>F)    
-    ## VineUUID       8  193937   24242   66.85 <2e-16 ***
-    ## Residuals   9851 3572143     363                   
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 147 observations deleted due to missingness
-
-``` r
-library(insight)
-```
-
-    ## Warning: package 'insight' was built under R version 4.0.2
-
-``` r
-m <- lmer(FreshWeight ~ 1 | VineUUID, data=all_fruit_data)
-summary(m)
-```
-
-    ## Linear mixed model fit by REML ['lmerMod']
-    ## Formula: FreshWeight ~ 1 | VineUUID
-    ##    Data: all_fruit_data
-    ## 
-    ## REML criterion at convergence: 86124.6
-    ## 
-    ## Scaled residuals: 
-    ##     Min      1Q  Median      3Q     Max 
-    ## -4.6166 -0.6767  0.0089  0.6550  5.0774 
-    ## 
-    ## Random effects:
-    ##  Groups   Name        Variance Std.Dev.
-    ##  VineUUID (Intercept)  23.9     4.889  
-    ##  Residual             362.6    19.043  
-    ## Number of obs: 9860, groups:  VineUUID, 9
-    ## 
-    ## Fixed effects:
-    ##             Estimate Std. Error t value
-    ## (Intercept)  117.989      1.641    71.9
-
-``` r
-get_variance(m)
-```
-
-    ## $var.fixed
-    ## [1] 0
-    ## 
-    ## $var.random
-    ## [1] 23.90049
-    ## 
-    ## $var.residual
-    ## [1] 362.6178
-    ## 
-    ## $var.distribution
-    ## [1] 362.6178
-    ## 
-    ## $var.dispersion
-    ## [1] 0
-    ## 
-    ## $var.intercept
-    ## VineUUID 
-    ## 23.90049
 
 ## Summary statistics
 
@@ -184,6 +117,87 @@ sqrt(mean(sd_vine^2))
 
     ## [1] 19.00577
 
+These summary statistics appear to be consistent with [Kiwifruit fruit
+size distributions, K. J. McAneney, A. C. Richardson, A. E.
+Green](https://www.tandfonline.com/doi/pdf/10.1080/01140671.1989.10428047)
+
+## Estimating variance components
+
+Using lmer to obtain a reml model;
+
+``` r
+m2 <- lmer(FreshWeight ~ VineTreatmentNoNumber + (VineTreatmentNoNumber | VineUUID), data=all_fruit_data)
+summary(m2)
+```
+
+    ## Linear mixed model fit by REML ['lmerMod']
+    ## Formula: FreshWeight ~ VineTreatmentNoNumber + (VineTreatmentNoNumber |  
+    ##     VineUUID)
+    ##    Data: all_fruit_data
+    ## 
+    ## REML criterion at convergence: 86103.2
+    ## 
+    ## Scaled residuals: 
+    ##     Min      1Q  Median      3Q     Max 
+    ## -4.6133 -0.6772  0.0089  0.6534  5.0761 
+    ## 
+    ## Random effects:
+    ##  Groups   Name                        Variance Std.Dev. Corr       
+    ##  VineUUID (Intercept)                  24.32    4.932              
+    ##           VineTreatmentNoNumberSpur    14.70    3.834   -0.71      
+    ##           VineTreatmentNoNumberStrung  15.37    3.920   -0.68  0.59
+    ##  Residual                             362.65   19.043              
+    ## Number of obs: 9859, groups:  VineUUID, 9
+    ## 
+    ## Fixed effects:
+    ##                             Estimate Std. Error t value
+    ## (Intercept)                  122.077      2.870  42.540
+    ## VineTreatmentNoNumberSpur     -4.423      3.519  -1.257
+    ## VineTreatmentNoNumberStrung   -7.837      3.578  -2.191
+    ## 
+    ## Correlation of Fixed Effects:
+    ##                 (Intr) VnTrtmntNNmbrSp
+    ## VnTrtmntNNmbrSp -0.815                
+    ## VnTrtmntNNmbrSt -0.802  0.654
+
+### Fixed effects
+
+Investigating methods, conventional is slightly better than Spur which
+is slightly better than Strung.
+
+``` r
+ get_parameters(m2)
+```
+
+    ##                     Parameter   Estimate
+    ## 1                 (Intercept) 122.076950
+    ## 2   VineTreatmentNoNumberSpur  -4.422920
+    ## 3 VineTreatmentNoNumberStrung  -7.836943
+
+### Random effects
+
+Variance components between Vines (3 per Treatment level) within
+Treatments;
+
+``` r
+c(get_variance_intercept(m2), get_variance_slope(m2))
+```
+
+    ##                         var.intercept.VineUUID 
+    ##                                       24.31987 
+    ##   var.slope.VineUUID.VineTreatmentNoNumberSpur 
+    ##                                       14.70186 
+    ## var.slope.VineUUID.VineTreatmentNoNumberStrung 
+    ##                                       15.36635
+
+Residual standard deviation within Vines is;
+
+``` r
+sqrt(unname(get_variance_residual(m2)))
+```
+
+    ## [1] 19.04325
+
 ## Sampling Distribution
 
 As we have the entire population of fruit picked and assessed for these
@@ -204,7 +218,7 @@ qqmath(~ FreshWeight | VineUUID, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 Testing for normality using normal Q-Q plots by Treatment collapsing
 over replicates;
@@ -222,7 +236,7 @@ qqmath(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 Testing for normality using normal Q-Q plots collapsing over all Vines;
 
@@ -239,4 +253,29 @@ qqmath(~ FreshWeight, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+## Bootstrapping
+
+``` r
+tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 1" & !is.na(all_fruit_data$FreshWeight), ]
+
+sample(tmp$FreshWeight, 40)
+```
+
+    ##  [1] 135.61 158.83 119.80 115.74 115.31 141.48 150.82 143.23 141.92 139.37
+    ## [11] 153.54 107.13 127.58  88.71 126.94 131.57 133.67  86.52 123.70 131.54
+    ## [21]  85.60 104.69 136.28 135.93 124.18 120.93 122.23 138.17 161.10 146.00
+    ## [31] 110.83  94.94  98.08 161.16 128.99 127.96 122.73 143.04 117.20 151.96
+
+``` r
+hist(replicate(1000,  var(sample(tmp$FreshWeight, 40))))
+```
+
+![](fruitWeight_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+``` r
+qqplot(replicate(1000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
+```
+
+![](fruitWeight_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->
