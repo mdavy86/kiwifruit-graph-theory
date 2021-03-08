@@ -9,9 +9,9 @@ stripped off each vine in 2020, fruit were then destructively assessed
 in the fast lab. Three different canopy structure treatments
 (Conventional Spur, Strung) were replicated over three vines.
 
-This dataset provides the entire population of fruit weights in 2020,
+This data set provides the entire population of fruit weights in 2020,
 and the underlying sampling distribution for G3, a control for the Gold
-programme. From this dataset we can examine the underlying within vine
+programme. From this data set we can examine the underlying within vine
 variability of fruit weights;
 
 Tabulating Numbers of fruit per vine assessed by Vine and Treatment;
@@ -121,6 +121,84 @@ These summary statistics appear to be consistent with [Kiwifruit fruit
 size distributions, K. J. McAneney, A. C. Richardson, A. E.
 Green](https://www.tandfonline.com/doi/pdf/10.1080/01140671.1989.10428047)
 
+The coefficient of variation is a useful metric, a value closer to 0
+indicates higher signal to noise ratio.
+
+``` r
+with(all_fruit_data, tapply(FreshWeight,  VineUUID, sd, na.rm=TRUE) / 
+       tapply(FreshWeight,  VineUUID, mean, na.rm=TRUE))
+```
+
+    ##    Vine 1    Vine 2    Vine 3    Vine 4    Vine 5    Vine 6    Vine 7    Vine 8 
+    ## 0.1528540 0.1418840 0.1694241 0.1668156 0.1762444 0.1560871 0.1559554 0.1820703 
+    ##    Vine 9 
+    ## 0.1454956
+
+For different Genotypes within families with smaller fruit sizes, a
+reasonable assumption to make is that the coefficient of variation would
+be similar to coefficient of variation values observed above.
+
+## Statistical Power
+
+Using underlying standard deviation information we can estimate
+statistical power based on a desired difference to detect.
+
+Assuming we have a sample to compare to G3 as a positive control, and
+the variability is similar, we can estimate power required using a two
+sided t-test to examine if there is a statistical difference between the
+samples. Using the empirical median standard deviation which is the
+standard deviation for at least 50% of the samples;
+
+Sampling n=60;
+
+``` r
+delta <- 1:20
+    n <- 60
+
+min_sd <- min(sd_vine)    
+rms_sd <- sqrt(mean(sd_vine^2))
+max_sd <- max(sd_vine)
+
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x))
+
+
+plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
+lines(delta, sapply(delta_min, function(x)x$power), col="green")
+lines(delta, sapply(delta_max, function(x)x$power), col="red")
+
+grid()
+legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), lty=1, bty="n")
+```
+
+![](fruitWeight_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+Sampling n=40;
+
+``` r
+delta <- 1:20
+    n <- 40
+
+min_sd <- min(sd_vine)    
+rms_sd <- sqrt(mean(sd_vine^2))
+max_sd <- max(sd_vine)
+
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x))
+
+
+plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
+lines(delta, sapply(delta_min, function(x)x$power), col="green")
+lines(delta, sapply(delta_max, function(x)x$power), col="red")
+
+grid()
+legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), lty=1, bty="n")
+```
+
+![](fruitWeight_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
 ## Estimating variance components
 
 Using lmer to obtain a reml model;
@@ -202,7 +280,7 @@ sqrt(unname(get_variance_residual(m2)))
 
 As we have the entire population of fruit picked and assessed for these
 9 Vines, we have the underlying sampling distribution. This distribution
-visually appears similar to an underlying normal distrubution, testing
+visually appears similar to an underlying normal distribution, testing
 for normality using normal Q-Q plots conditioned by Vine;
 
 ``` r
@@ -218,7 +296,7 @@ qqmath(~ FreshWeight | VineUUID, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 Testing for normality using normal Q-Q plots by Treatment collapsing
 over replicates;
@@ -236,7 +314,7 @@ qqmath(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 Testing for normality using normal Q-Q plots collapsing over all Vines;
 
@@ -253,29 +331,41 @@ qqmath(~ FreshWeight, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 ## Bootstrapping
 
 ``` r
-tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 1" & !is.na(all_fruit_data$FreshWeight), ]
+tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 2" & !is.na(all_fruit_data$FreshWeight), ]
 
-sample(tmp$FreshWeight, 40)
+#sample(tmp$FreshWeight, 40)
+
+hist(replicate(10000,  mean(sample(tmp$FreshWeight, 40))), breaks=30)
 ```
 
-    ##  [1] 135.61 158.83 119.80 115.74 115.31 141.48 150.82 143.23 141.92 139.37
-    ## [11] 153.54 107.13 127.58  88.71 126.94 131.57 133.67  86.52 123.70 131.54
-    ## [21]  85.60 104.69 136.28 135.93 124.18 120.93 122.23 138.17 161.10 146.00
-    ## [31] 110.83  94.94  98.08 161.16 128.99 127.96 122.73 143.04 117.20 151.96
+![](fruitWeight_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 ``` r
-hist(replicate(1000,  var(sample(tmp$FreshWeight, 40))))
+hist(replicate(10000,  sd(sample(tmp$FreshWeight, 40))), breaks=30)
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-17-2.png)<!-- -->
 
 ``` r
-qqplot(replicate(1000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
+qqplot(replicate(10000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
+abline(0,1)
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-17-3.png)<!-- -->
+
+``` r
+hist(replicate(10000,  mean(sample(tmp$FreshWeight, 60))), breaks=30)
+```
+
+![](fruitWeight_files/figure-gfm/unnamed-chunk-17-4.png)<!-- -->
+
+``` r
+hist(replicate(10000,  sd(sample(tmp$FreshWeight, 60))), breaks=30)
+```
+
+![](fruitWeight_files/figure-gfm/unnamed-chunk-17-5.png)<!-- -->

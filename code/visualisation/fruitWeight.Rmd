@@ -60,8 +60,8 @@ fruit harvest, the entire population of fruit were stripped off each vine in 202
 fruit were then destructively assessed in the fast lab. Three different canopy
 structure treatments (Conventional Spur, Strung) were replicated over three vines.
 
-This dataset provides the entire population of fruit weights in 2020, and the underlying
-sampling distribution for G3, a control for the Gold programme. From this dataset we can
+This data set provides the entire population of fruit weights in 2020, and the underlying
+sampling distribution for G3, a control for the Gold programme. From this data set we can
 examine the underlying within vine variability of fruit weights;
 
 Tabulating Numbers of fruit per vine assessed by Vine and Treatment;
@@ -120,6 +120,68 @@ These summary statistics appear to be consistent with
 [Kiwifruit fruit size distributions, K. J. McAneney, A. C. Richardson, A. E. Green](https://www.tandfonline.com/doi/pdf/10.1080/01140671.1989.10428047)
 
 
+The coefficient of variation is a useful metric, a value closer to 0 indicates higher signal to noise ratio.
+
+```{r}
+with(all_fruit_data, tapply(FreshWeight,  VineUUID, sd, na.rm=TRUE) / 
+       tapply(FreshWeight,  VineUUID, mean, na.rm=TRUE))
+```
+
+For different Genotypes within families with smaller fruit sizes, a reasonable assumption to make is that the coefficient of variation would be similar to coefficient of variation values observed above.
+
+
+## Statistical Power
+
+Using underlying standard deviation information we can estimate statistical power based on a desired difference to detect.
+
+Assuming we have a sample to compare to G3 as a positive control, and the variability is similar, we can estimate power required using a two sided t-test to examine if there is a statistical difference between the samples. Using the empirical median standard deviation which is the standard deviation for at least 50% of the samples;
+
+Sampling n=60;
+
+```{r}
+delta <- 1:20
+    n <- 60
+
+min_sd <- min(sd_vine)    
+rms_sd <- sqrt(mean(sd_vine^2))
+max_sd <- max(sd_vine)
+
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x))
+
+
+plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
+lines(delta, sapply(delta_min, function(x)x$power), col="green")
+lines(delta, sapply(delta_max, function(x)x$power), col="red")
+
+grid()
+legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), lty=1, bty="n")
+```
+
+Sampling n=40;
+
+```{r}
+delta <- 1:20
+    n <- 40
+
+min_sd <- min(sd_vine)    
+rms_sd <- sqrt(mean(sd_vine^2))
+max_sd <- max(sd_vine)
+
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x))
+
+
+plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
+lines(delta, sapply(delta_min, function(x)x$power), col="green")
+lines(delta, sapply(delta_max, function(x)x$power), col="red")
+
+grid()
+legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), lty=1, bty="n")
+```
+
 ## Estimating variance components
 
 Using lmer to obtain a reml model;
@@ -159,7 +221,7 @@ sqrt(unname(get_variance_residual(m2)))
 
 As we have the entire population of fruit picked and assessed for these 9 Vines,
 we have the underlying sampling distribution. This distribution visually appears 
-similar to an underlying normal distrubution, testing for normality using normal
+similar to an underlying normal distribution, testing for normality using normal
 Q-Q plots conditioned by Vine;
 
 ```{r}
@@ -210,13 +272,20 @@ qqmath(~ FreshWeight, data=all_fruit_data,
 ## Bootstrapping
 
 ```{r}
-#tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 1" & !is.na(all_fruit_data$FreshWeight), ]
+tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 2" & !is.na(all_fruit_data$FreshWeight), ]
 
 #sample(tmp$FreshWeight, 40)
 
-hist(replicate(10000,  var(sample(tmp$FreshWeight, 40))), breaks=30)
+hist(replicate(10000,  mean(sample(tmp$FreshWeight, 40))), breaks=30)
+hist(replicate(10000,  sd(sample(tmp$FreshWeight, 40))), breaks=30)
 
 qqplot(replicate(10000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
+abline(0,1)
+
+
+hist(replicate(10000,  mean(sample(tmp$FreshWeight, 60))), breaks=30)
+hist(replicate(10000,  sd(sample(tmp$FreshWeight, 60))), breaks=30)
+
 ```
 
 
@@ -252,4 +321,16 @@ xyplot(Reaction ~ 1 + Days | Subject , data=sleepstudy, layout=c(9,2),
 ## Test for normality
 replicate(10000, shapiro.test(rt(3, 4))$p) %>%  hist
 replicate(1000, shapiro.test(sample(all_fruit_data$FreshWeight, 100, replace=TRUE))$p) %>%  hist
+
+
+X <- rnorm(1000, 100, 20)
+hist(replicate(10000,  sd(sample(X, 60))), breaks=30)
+qqplot(replicate(10000,  var(sample(X, 40))), rchisq(10000, 40-1))
+abline(0,1)
+
+
+ggplot(data.frame(eta=predict(m2,type="link"),pearson=residuals(m2,type="pearson")),
+      aes(x=eta,y=pearson)) +
+    geom_point() +
+    theme_bw()
 ```
