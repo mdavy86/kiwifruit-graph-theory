@@ -38,8 +38,13 @@ Visualizing the Fresh weight using histograms, conditioned on each Vine,
 Treatment, and collapsed over Vines;
 
 ``` r
-histogram(~ FreshWeight | VineUUID, data=all_fruit_data, scales=list(alternating=FALSE), 
-          between=list(x=0.3, y=0.3), breaks=30, layout=c(3,3))
+histogram(~ FreshWeight | VineUUID, data=all_fruit_data, scales=list(alternating=FALSE), between=list(x=0.3, y=0.3),
+          breaks=30, layout=c(3,3), panel=function(x, subscripts, groups, ...){
+            panel.histogram(x, ...)
+            panel.abline(v=90, lty=3, col="red", lwd=1.5)
+            thres_frac <- sum(x<=90, na.rm=TRUE) / length(x)
+            panel.text(50, 12, paste0(round(100*thres_frac,2), "%"), cex=0.5)
+          })
 ```
 
 ![](fruitWeight_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
@@ -47,14 +52,25 @@ histogram(~ FreshWeight | VineUUID, data=all_fruit_data, scales=list(alternating
 ``` r
 histogram(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
           aspect=1, main="Collapsing over replicate Vines", 
-          scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,1))
+          scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,1), panel=function(x, subscripts, groups, ...){
+            panel.histogram(x, ...)
+            panel.abline(v=90, lty=3, col="red", lwd=1.5)
+            thres_frac <- sum(x<=90, na.rm=TRUE) / length(x)
+            panel.text(50, 10, paste0(round(100*thres_frac,2), "%"), cex=0.6)
+          })
 ```
 
 ![](fruitWeight_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
 ``` r
 histogram(~ FreshWeight, data=all_fruit_data, scales=list(alternating=FALSE), 
-          between=list(x=0.3, y=0.3), breaks=30, main="Collapsing over all Vines")
+          between=list(x=0.3, y=0.3), breaks=30, main="Collapsing over all Vines",
+          panel=function(x, subscripts, groups, ...){
+            panel.histogram(x, ...)
+            panel.abline(v=90, lty=3, col="red", lwd=1.5)
+            thres_frac <- sum(x<=90, na.rm=TRUE) / length(x)
+            panel.text(50, 10, paste0(round(100*thres_frac,2), "%"))
+          })
 ```
 
 ![](fruitWeight_files/figure-gfm/unnamed-chunk-2-3.png)<!-- -->
