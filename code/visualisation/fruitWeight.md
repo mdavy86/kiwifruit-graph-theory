@@ -175,9 +175,9 @@ min_sd <- min(sd_vine)
 rms_sd <- sqrt(mean(sd_vine^2))
 max_sd <- max(sd_vine)
 
-delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x))
-delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x))
-delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x))
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
 
 
 plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
@@ -200,9 +200,9 @@ min_sd <- min(sd_vine)
 rms_sd <- sqrt(mean(sd_vine^2))
 max_sd <- max(sd_vine)
 
-delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x))
-delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x))
-delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x))
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
 
 
 plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
