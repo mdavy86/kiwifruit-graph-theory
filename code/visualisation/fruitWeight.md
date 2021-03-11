@@ -154,6 +154,8 @@ For different Genotypes within families with smaller fruit sizes, a
 reasonable assumption to make is that the coefficient of variation would
 be similar to coefficient of variation values observed above.
 
+<img src="sd_vs_mean.png">
+
 ## Statistical Power
 
 Using underlying standard deviation information we can estimate
@@ -176,10 +178,15 @@ delta <- 1:20
 min_sd <- min(sd_vine)    
 rms_sd <- sqrt(mean(sd_vine^2))
 max_sd <- max(sd_vine)
+type  <- "one.sample"
+alt   <- "one.sided"
 
-delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
 
 
 plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
@@ -192,6 +199,39 @@ legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), 
 
 ![](fruitWeight_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
+Tabulating;
+
+``` r
+knitr::kable(data.frame(Delta=delta,
+           min_sd = round(sapply(delta_min, function(x)x$power),3),
+           rms_sd = round(sapply(delta_rms, function(x)x$power),3),
+           max_sd = round(sapply(delta_max, function(x)x$power),3)
+))
+```
+
+| Delta | min\_sd | rms\_sd | max\_sd |
+| ----: | ------: | ------: | ------: |
+|     1 |   0.117 |   0.107 |   0.101 |
+|     2 |   0.232 |   0.201 |   0.184 |
+|     3 |   0.391 |   0.331 |   0.298 |
+|     4 |   0.571 |   0.487 |   0.437 |
+|     5 |   0.737 |   0.644 |   0.585 |
+|     6 |   0.862 |   0.780 |   0.721 |
+|     7 |   0.939 |   0.880 |   0.831 |
+|     8 |   0.977 |   0.943 |   0.908 |
+|     9 |   0.993 |   0.976 |   0.955 |
+|    10 |   0.998 |   0.991 |   0.981 |
+|    11 |   1.000 |   0.997 |   0.993 |
+|    12 |   1.000 |   0.999 |   0.998 |
+|    13 |   1.000 |   1.000 |   0.999 |
+|    14 |   1.000 |   1.000 |   1.000 |
+|    15 |   1.000 |   1.000 |   1.000 |
+|    16 |   1.000 |   1.000 |   1.000 |
+|    17 |   1.000 |   1.000 |   1.000 |
+|    18 |   1.000 |   1.000 |   1.000 |
+|    19 |   1.000 |   1.000 |   1.000 |
+|    20 |   1.000 |   1.000 |   1.000 |
+
 Sampling n=40;
 
 ``` r
@@ -201,10 +241,15 @@ delta <- 1:20
 min_sd <- min(sd_vine)    
 rms_sd <- sqrt(mean(sd_vine^2))
 max_sd <- max(sd_vine)
+type  <- "one.sample"
+alt   <- "one.sided"
 
-delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
 
 
 plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
@@ -215,7 +260,40 @@ grid()
 legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), lty=1, bty="n")
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+Tabulating;
+
+``` r
+knitr::kable(data.frame(Delta=delta,
+           min_sd = round(sapply(delta_min, function(x)x$power),3),
+           rms_sd = round(sapply(delta_rms, function(x)x$power),3),
+           max_sd = round(sapply(delta_max, function(x)x$power),3)
+))
+```
+
+| Delta | min\_sd | rms\_sd | max\_sd |
+| ----: | ------: | ------: | ------: |
+|     1 |   0.101 |   0.094 |   0.090 |
+|     2 |   0.183 |   0.161 |   0.149 |
+|     3 |   0.296 |   0.253 |   0.230 |
+|     4 |   0.435 |   0.368 |   0.331 |
+|     5 |   0.581 |   0.496 |   0.446 |
+|     6 |   0.717 |   0.624 |   0.566 |
+|     7 |   0.828 |   0.740 |   0.680 |
+|     8 |   0.906 |   0.834 |   0.779 |
+|     9 |   0.954 |   0.903 |   0.858 |
+|    10 |   0.980 |   0.948 |   0.915 |
+|    11 |   0.992 |   0.974 |   0.953 |
+|    12 |   0.997 |   0.989 |   0.976 |
+|    13 |   0.999 |   0.995 |   0.989 |
+|    14 |   1.000 |   0.998 |   0.995 |
+|    15 |   1.000 |   0.999 |   0.998 |
+|    16 |   1.000 |   1.000 |   0.999 |
+|    17 |   1.000 |   1.000 |   1.000 |
+|    18 |   1.000 |   1.000 |   1.000 |
+|    19 |   1.000 |   1.000 |   1.000 |
+|    20 |   1.000 |   1.000 |   1.000 |
 
 ## Estimating variance components
 
@@ -314,7 +392,7 @@ qqmath(~ FreshWeight | VineUUID, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 Testing for normality using normal Q-Q plots by Treatment collapsing
 over replicates;
@@ -332,7 +410,7 @@ qqmath(~ FreshWeight | VineTreatmentNoNumber, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 Testing for normality using normal Q-Q plots collapsing over all Vines;
 
@@ -349,41 +427,4 @@ qqmath(~ FreshWeight, data=all_fruit_data,
        })
 ```
 
-![](fruitWeight_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
-
-## Bootstrapping
-
-``` r
-tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 2" & !is.na(all_fruit_data$FreshWeight), ]
-
-#sample(tmp$FreshWeight, 40)
-
-hist(replicate(10000,  mean(sample(tmp$FreshWeight, 40))), breaks=30)
-```
-
-![](fruitWeight_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
-
-``` r
-hist(replicate(10000,  sd(sample(tmp$FreshWeight, 40))), breaks=30)
-```
-
-![](fruitWeight_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
-
-``` r
-qqplot(replicate(10000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
-abline(0,1)
-```
-
-![](fruitWeight_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
-
-``` r
-hist(replicate(10000,  mean(sample(tmp$FreshWeight, 60))), breaks=30)
-```
-
-![](fruitWeight_files/figure-gfm/unnamed-chunk-18-4.png)<!-- -->
-
-``` r
-hist(replicate(10000,  sd(sample(tmp$FreshWeight, 60))), breaks=30)
-```
-
-![](fruitWeight_files/figure-gfm/unnamed-chunk-18-5.png)<!-- -->
+![](fruitWeight_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->

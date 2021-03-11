@@ -148,6 +148,8 @@ with(all_fruit_data, tapply(FreshWeight,  VineUUID, sd, na.rm=TRUE) /
 
 For different Genotypes within families with smaller fruit sizes, a reasonable assumption to make is that the coefficient of variation would be similar to coefficient of variation values observed above.
 
+<img src="sd_vs_mean.png">
+
 
 ## Statistical Power
 
@@ -260,10 +262,15 @@ delta <- 1:20
 min_sd <- min(sd_vine)    
 rms_sd <- sqrt(mean(sd_vine^2))
 max_sd <- max(sd_vine)
+type  <- "one.sample"
+alt   <- "one.sided"
 
-delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
 
 
 plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
@@ -274,6 +281,17 @@ grid()
 legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), lty=1, bty="n")
 ```
 
+Tabulating;
+
+```{r}
+knitr::kable(data.frame(Delta=delta,
+           min_sd = round(sapply(delta_min, function(x)x$power),3),
+           rms_sd = round(sapply(delta_rms, function(x)x$power),3),
+           max_sd = round(sapply(delta_max, function(x)x$power),3)
+))
+```
+
+
 Sampling n=40;
 
 ```{r}
@@ -283,10 +301,15 @@ delta <- 1:20
 min_sd <- min(sd_vine)    
 rms_sd <- sqrt(mean(sd_vine^2))
 max_sd <- max(sd_vine)
+type  <- "one.sample"
+alt   <- "one.sided"
 
-delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
-delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x, type = "two.sample", alternative="two.sided"))
+delta_min <- lapply(delta, function(x)power.t.test(n=n, sd=min_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_rms <- lapply(delta, function(x)power.t.test(n=n, sd=rms_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
+delta_max <- lapply(delta, function(x)power.t.test(n=n, sd=max_sd, sig.level=0.05, delta=x,
+                                                   type=type, alternative=alt))
 
 
 plot(delta, sapply(delta_rms, function(x)x$power), type="l", col="grey", ylab="Statistical power", main=substitute(paste("n=", n, ", rms ", hat(sigma)==x), list(n=n, x=round(rms_sd, 2))))
@@ -295,6 +318,16 @@ lines(delta, sapply(delta_max, function(x)x$power), col="red")
 
 grid()
 legend("topleft",legend = c("max", "rms", "min"), col=c("red","grey", "green"), lty=1, bty="n")
+```
+
+Tabulating;
+
+```{r}
+knitr::kable(data.frame(Delta=delta,
+           min_sd = round(sapply(delta_min, function(x)x$power),3),
+           rms_sd = round(sapply(delta_rms, function(x)x$power),3),
+           max_sd = round(sapply(delta_max, function(x)x$power),3)
+))
 ```
 
 ## Estimating variance components
@@ -384,25 +417,6 @@ qqmath(~ FreshWeight, data=all_fruit_data,
 ```
 
 
-## Bootstrapping
-
-```{r}
-tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 2" & !is.na(all_fruit_data$FreshWeight), ]
-
-#sample(tmp$FreshWeight, 40)
-
-hist(replicate(10000,  mean(sample(tmp$FreshWeight, 40))), breaks=30)
-hist(replicate(10000,  sd(sample(tmp$FreshWeight, 40))), breaks=30)
-
-qqplot(replicate(10000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
-abline(0,1)
-
-
-hist(replicate(10000,  mean(sample(tmp$FreshWeight, 60))), breaks=30)
-hist(replicate(10000,  sd(sample(tmp$FreshWeight, 60))), breaks=30)
-
-```
-
 
 ```{r scratchpad, echo=FALSE, eval=FALSE}
 xyplot( DryMatter ~ FreshWeight | factor(VineUUID), data=all_fruit_data, scales=list(alternating=FALSE), between=list(x=0.3, y=0.3), breaks=30, layout=c(3,3), pch=16, cex=0.3)
@@ -468,7 +482,7 @@ print(Sens)
 ## Simulate two sample, two sided
 est_power_two <- power.t.test(n=40, sd=20, power=0.8, type="two.sample", alternative="two.sided")
 
-## Simulate H0
+
 set.seed(42)
 pvals <- replicate(100000, {
   X1 <- rnorm(40, 110, 20)
@@ -480,12 +494,13 @@ pvals <- replicate(100000, {
 Sens <- sum(pvals <=0.05)/length(pvals)
 print(Sens)
 
+## Simulate two sample, two sided
 # create user-defined function to generate and analyze data
 t_func <- function(simNum, N, d) {
     x1 <- rnorm(N, 0, 20)
     x2 <- rnorm(N, d, 20)
 
-    t <- t.test(x1, x2, var.equal=TRUE)  # run t-test on generated data
+    t <- t.test(x1, x2, alternative="two.sided", var.equal=TRUE)  # run t-test on generated data
     stat <- t$statistic
     p <- t$p.value
 
@@ -493,10 +508,49 @@ t_func <- function(simNum, N, d) {
         # return a named vector with the results we want to keep
 }
 
-power_ttest <- run_test(t_func, n.iter=5000, output='data.frame', N=40, d=12.68598)  # simulate data
+d <- power.t.test(n=40, sd=20, power=0.8, type="two.sample", alternative="two.sided")$delta
+power_ttest <- run_test(t_func, n.iter=10000, output='data.frame', N=40, d=d)  # simulate data
 results(power_ttest) %>%
     summarise(power=mean(sig))
 
+
+## Simulate two sample, one sided
+# create user-defined function to generate and analyze data
+t_func <- function(simNum, N, d) {
+    x1 <- rnorm(N, 0, 20)
+    x2 <- rnorm(N, d, 20)
+
+    t <- t.test(x1, x2, alternative="less", var.equal=TRUE)  # run t-test on generated data
+    stat <- t$statistic
+    p <- t$p.value
+
+    return(c(t=stat, p=p, sig=(p <= .05)))
+        # return a named vector with the results we want to keep
+}
+
+d <- power.t.test(n=40, sd=20, power=0.8, type="two.sample", alternative="one.sided")$delta
+power_ttest <- run_test(t_func, n.iter=10000, output='data.frame', N=40, d=d)  # simulate data
+results(power_ttest) %>%
+    summarise(power=mean(sig))
+
+
+## Simulate one sample, one sided
+# create user-defined function to generate and analyze data
+t_func <- function(simNum, N, d) {
+    x2 <- rnorm(N, d, 20)
+
+    t <- t.test(x2, mu=0, alternative="greater", var.equal=TRUE)  # run t-test on generated data
+    stat <- t$statistic
+    p <- t$p.value
+
+    return(c(t=stat, p=p, sig=(p <= .05)))
+        # return a named vector with the results we want to keep
+}
+
+d <- power.t.test(n=40, sd=20, power=0.8, type="one.sample", alternative="one.sided")$delta
+power_ttest <- run_test(t_func, n.iter=10000, output='data.frame', N=40, d=d)  # simulate data
+results(power_ttest) %>%
+    summarise(power=mean(sig))
 
 X <- rnorm(1000, 100, 20)
 hist(replicate(10000,  sd(sample(X, 60))), breaks=30)
@@ -508,4 +562,23 @@ ggplot(data.frame(eta=predict(m2,type="link"),pearson=residuals(m2,type="pearson
       aes(x=eta,y=pearson)) +
     geom_point() +
     theme_bw()
+
+
+#
+## Bootstraps
+#
+
+tmp <- all_fruit_data[all_fruit_data$VineUUID%in%"Vine 2" & !is.na(all_fruit_data$FreshWeight), ]
+
+#sample(tmp$FreshWeight, 40)
+
+hist(replicate(10000,  mean(sample(tmp$FreshWeight, 40))), breaks=30)
+hist(replicate(10000,  sd(sample(tmp$FreshWeight, 40))), breaks=30)
+
+qqplot(replicate(10000,  var(sample(tmp$FreshWeight, 40))), rchisq(1000, 40-1))
+abline(0,1)
+
+
+hist(replicate(10000,  mean(sample(tmp$FreshWeight, 60))), breaks=30)
+hist(replicate(10000,  sd(sample(tmp$FreshWeight, 60))), breaks=30)
 ```
